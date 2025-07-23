@@ -2,13 +2,7 @@
   "version": 2,
   "functions": {
     "api/webhook.js": {
-      "runtime": "@vercel/node"
+      "runtime": "nodejs18.x"
     }
-  },
-  "routes": [
-    {
-      "src": "/api/webhook",
-      "dest": "/api/webhook.js"
-    }
-  ]
+  }
 }
