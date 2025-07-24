@@ -1,11 +1,10 @@
-// LINE Webhook for Vercel
-// ai-coaching-linebot/api/webhook.js
-
 export default async function handler(req, res) {
-  // CORS設定
+  // CORSヘッダーを設定
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+
+  console.log('Webhook called:', req.method);
 
   if (req.method === 'OPTIONS') {
     res.status(200).end();
@@ -19,9 +18,10 @@ export default async function handler(req, res) {
 
   if (req.method === 'POST') {
     try {
-      console.log('Webhook received:', JSON.stringify(req.body));
+      console.log('POST request received');
+      console.log('Body:', JSON.stringify(req.body));
       
-      const events = req.body.events || [];
+      const events = req.body?.events || [];
       
       for (const event of events) {
         if (event.type === 'message' && event.message.type === 'text') {
@@ -30,13 +30,16 @@ export default async function handler(req, res) {
       }
       
       res.status(200).send('OK');
+      return;
     } catch (error) {
-      console.error('Webhook error:', error);
+      console.error('POST error:', error);
       res.status(200).send('OK');
+      return;
     }
-  } else {
-    res.status(405).send('Method Not Allowed');
   }
+
+  // その他のメソッドの場合
+  res.status(200).send('OK');
 }
 
 // テキストメッセージの処理
@@ -65,7 +68,7 @@ async function generateAIResponse(userMessage) {
   const geminiApiKey = process.env.GEMINI_API_KEY;
   
   if (!geminiApiKey) {
-    return 'こんにちは！設定を確認中です。少々お待ちください。';
+    return 'こんにちは！今日はどんなことを考えていますか？';
   }
   
   const prompt = `
