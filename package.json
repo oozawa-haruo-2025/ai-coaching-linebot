@@ -1,19 +1,5 @@
 {
   "name": "ai-coaching-linebot",
   "version": "1.0.0",
-  "description": "AI Personal Coaching LINE Bot",
-  "type": "module",
-  "engines": {
-    "node": "20.x"
-  },
-  "scripts": {
-    "build": "echo 'Build completed'"
-  },
-  "keywords": [
-    "line-bot",
-    "ai",
-    "coaching"
-  ],
-  "author": "Haruo Oozawa",
-  "license": "MIT"
+  "type": "module"
 }
