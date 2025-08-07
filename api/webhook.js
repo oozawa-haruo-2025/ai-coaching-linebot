@@ -1,100 +1,78 @@
-async function generateAIResponse(userMessage) {
-  const geminiApiKey = process.env.GEMINI_API_KEY;
+// 最初の行に正しいexport文を追加
+export default async function handler(req, res) {
+  console.log('=== WEBHOOK CALLED ===');
+  console.log('Method:', req.method);
   
-  console.log('Gemini API Key exists:', !!geminiApiKey);
-  console.log('API Key length:', geminiApiKey ? geminiApiKey.length : 0);
+  if (req.method === 'POST') {
+    try {
+      console.log('POST request body:', JSON.stringify(req.body));
+      
+      const events = req.body?.events || [];
+      console.log('Events count:', events.length);
+      
+      for (const event of events) {
+        console.log('Event:', JSON.stringify(event));
+        
+        if (event.type === 'message' && event.message.type === 'text') {
+          const userId = event.source.userId;
+          const userMessage = event.message.text;
+          
+          console.log('Processing message from:', userId);
+          console.log('Message:', userMessage);
+          
+          // 固定応答をテスト
+          await sendSimpleResponse(userId, `確認: "${userMessage}" を受信しました。AIコーチング機能をテスト中です。`);
+        }
+      }
+      
+      res.status(200).send('OK');
+    } catch (error) {
+      console.error('POST error:', error);
+      res.status(200).send('OK');
+    }
+  } else {
+    res.status(200).send('Webhook working');
+  }
+}
+
+async function sendSimpleResponse(userId, message) {
+  const lineAccessToken = process.env.LINE_CHANNEL_ACCESS_TOKEN;
   
-  if (!geminiApiKey) {
-    console.log('No Gemini API key found');
-    return 'こんにちは！今日はどんなことを考えていますか？';
+  console.log('Sending response to:', userId);
+  console.log('Message:', message);
+  console.log('Token exists:', !!lineAccessToken);
+  
+  if (!lineAccessToken) {
+    console.error('No LINE access token');
+    return;
   }
   
-  const prompt = `あなたは親しみやすく、ポジティブな方向へ導くパーソナルコーチです。
-30歳の経営者のユーザーに対して、自己理解を深め、言語化能力を向上させるための質の高い問いかけを提供してください。
-
-コーチングの指針：
-- 親しみやすい口調で話す
-- 共感を示してから問いかける
-- 答えを教えずに気づきを促す
-- 感情の言語化を重視
-- 150文字以内で簡潔に応答
-
-ユーザーのメッセージ：${userMessage}
-
-上記を踏まえて、コーチとして適切な応答をしてください。`;
-
   try {
-    console.log('Calling Gemini API with new endpoint...');
-    
-    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${geminiApiKey}`, {
+    const response = await fetch('https://api.line.me/v2/bot/message/push', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+        'Authorization': `Bearer ${lineAccessToken}`
       },
       body: JSON.stringify({
-        contents: [{
-          parts: [{
-            text: prompt
-          }]
-        }],
-        generationConfig: {
-          maxOutputTokens: 300,
-          temperature: 0.7,
-          topP: 0.9
-        }
+        to: userId,
+        messages: [{
+          type: 'text',
+          text: message
+        }]
       })
     });
 
-    console.log('Gemini API response status:', response.status);
+    console.log('LINE API response status:', response.status);
     
     if (!response.ok) {
       const errorText = await response.text();
-      console.error('Gemini API error response:', errorText);
-      
-      // 別のモデルでリトライ
-      console.log('Retrying with gemini-pro...');
-      const retryResponse = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${geminiApiKey}`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          contents: [{
-            parts: [{
-              text: prompt
-            }]
-          }]
-        })
-      });
-      
-      if (!retryResponse.ok) {
-        throw new Error(`Gemini API error: ${retryResponse.status}`);
-      }
-      
-      const retryData = await retryResponse.json();
-      console.log('Retry successful');
-      
-      if (retryData.candidates && retryData.candidates.length > 0) {
-        const aiResponse = retryData.candidates[0].content.parts[0].text;
-        console.log('AI response generated (retry):', aiResponse);
-        return aiResponse;
-      }
+      console.error('LINE API error:', errorText);
+    } else {
+      console.log('Message sent successfully');
     }
-
-    const data = await response.json();
-    console.log('Gemini API success');
-    
-    if (data.candidates && data.candidates.length > 0) {
-      const aiResponse = data.candidates[0].content.parts[0].text;
-      console.log('AI response generated:', aiResponse);
-      return aiResponse;
-    }
-    
-    console.log('No candidates in Gemini response');
-    return 'すみません、少し考えがまとまりません。もう一度話しかけてください。';
     
   } catch (error) {
-    console.error('Gemini API error details:', error);
-    return 'こんにちは！今日はどんなことを考えていますか？';
+    console.error('Send message error:', error);
   }
 }
